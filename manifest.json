@@ -1,0 +1,60 @@
+{
+  "dxt_version": "0.1",
+  "name": "Coda",
+  "version": "0.1.0",
+  "description": "Preference-first personalization for Claude. Learns what you care about and injects the right preferences into every task.",
+  "long_description": "Coda is a personalization control layer that sits on top of Claude. Instead of storing raw conversation history, it builds structured preference objects — your tone, format, goals, constraints — scoped to task types. A writing task gets your writing preferences. A coding task gets your coding preferences. Confidence scores update automatically based on whether you accept, edit, or reject outputs. Includes an inspection console at localhost:3456 so you always know what Coda told Claude and why.",
+  "author": {
+    "name": "GeeVee",
+    "url": "https://github.com/geevee/coda"
+  },
+  "server": {
+    "type": "python",
+    "entry_point": "server.py",
+    "mcp_config": {
+      "command": "/opt/homebrew/bin/python3.14",
+      "args": ["-u", "${__dirname}/server.py"],
+      "env": {
+        "CODA_DB_PATH": "${user_config.db_path}",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "coda_get_preferences",
+      "description": "Get ranked preferences for the current task type"
+    },
+    {
+      "name": "coda_log_feedback",
+      "description": "Log accept/edit/reject signal to sharpen confidence scores"
+    },
+    {
+      "name": "coda_upsert_preference",
+      "description": "Create or update a preference object"
+    },
+    {
+      "name": "coda_explain_retrieval",
+      "description": "Explain why specific preferences were returned"
+    },
+    {
+      "name": "coda_import_from_mem0",
+      "description": "Import and structure raw Mem0 memories into Coda"
+    }
+  ],
+  "keywords": ["personalization", "memory", "preferences", "mcp", "claude"],
+  "license": "MIT",
+  "compatibility": {
+    "claude_desktop": ">=0.2.16",
+    "platforms": ["darwin", "win32", "linux"]
+  },
+  "user_config": {
+    "db_path": {
+      "type": "string",
+      "title": "Database path",
+      "description": "Where to store the Coda SQLite database. Leave blank for default (next to server.py).",
+      "required": false,
+      "default": ""
+    }
+  }
+}

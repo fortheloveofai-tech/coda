@@ -1,0 +1,25 @@
+# Database
+*.db
+*.db-shm
+*.db-wal
+.coda/
+
+# Skill workspace / eval artifacts
+coda-skill-workspace/
+*.skill
+eval_review_coda.html
+console.html
+
+# Node
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# OS
+.DS_Store
+Thumbs.db

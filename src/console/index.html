@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coda — Inspection Console</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a;
+      --text: #e2e8f0; --muted: #64748b; --accent: #4a9eed;
+      --green: #22c55e; --amber: #f59e0b; --red: #ef4444; --purple: #8b5cf6;
+      --radius: 8px; --font: 'Inter', system-ui, sans-serif;
+    }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* Layout */
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+    .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); }
+    .user-badge { background: var(--border); border-radius: 20px; padding: 4px 12px; font-size: 13px; color: var(--muted); }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+    /* Stats row */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .stat-val { font-size: 28px; font-weight: 700; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* Section */
+    .section-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+
+    /* Preference cards */
+    .prefs-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
+    .pref-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; transition: border-color 0.15s; }
+    .pref-card:hover { border-color: var(--accent); }
+    .pref-card.pinned { border-left: 3px solid var(--amber); }
+    .cat-badge { border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px; }
+    .cat-tone        { background: #1e3a5f; color: #93c5fd; }
+    .cat-format      { background: #1a4d2e; color: #86efac; }
+    .cat-goals       { background: #2d1b69; color: #c4b5fd; }
+    .cat-constraints { background: #5c1a1a; color: #fca5a5; }
+    .cat-habits      { background: #3b2f1a; color: #fcd34d; }
+    .cat-role        { background: #1a3a4d; color: #67e8f9; }
+
+    .pref-body { flex: 1; min-width: 0; }
+    .pref-value { font-size: 14px; line-height: 1.5; }
+    .pref-meta { display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap; }
+    .pref-meta span { font-size: 12px; color: var(--muted); }
+    .pref-meta .conf { color: var(--text); font-weight: 600; }
+    .pref-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+    .btn { border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 5px; padding: 4px 10px; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+    .btn:hover { background: var(--border); }
+    .btn.danger:hover { border-color: var(--red); color: var(--red); }
+    .btn.primary { border-color: var(--accent); color: var(--accent); }
+    .btn.primary:hover { background: var(--accent); color: #fff; }
+    .pin-icon { font-size: 14px; cursor: pointer; opacity: 0.4; transition: opacity 0.15s; }
+    .pin-icon.active { opacity: 1; color: var(--amber); }
+
+    /* Confidence bar */
+    .conf-bar-wrap { width: 60px; height: 4px; background: var(--border); border-radius: 2px; display: inline-block; vertical-align: middle; margin-right: 4px; }
+    .conf-bar { height: 100%; border-radius: 2px; }
+
+    /* Retrievals */
+    .retrieval-list { display: flex; flex-direction: column; gap: 8px; }
+    .retrieval-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; }
+    .retrieval-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .retrieval-task { font-size: 12px; font-weight: 600; color: var(--accent); text-transform: uppercase; }
+    .retrieval-time { font-size: 12px; color: var(--muted); }
+    .retrieval-prefs { font-size: 12px; color: var(--muted); }
+    .retrieval-id { font-size: 11px; color: var(--border); font-family: monospace; margin-top: 2px; }
+
+    /* Empty state */
+    .empty { text-align: center; color: var(--muted); padding: 48px 0; font-size: 14px; }
+
+    /* Filter tabs */
+    .filter-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+    .tab { border: 1px solid var(--border); border-radius: 20px; padding: 4px 14px; font-size: 12px; cursor: pointer; color: var(--muted); background: transparent; transition: all 0.15s; }
+    .tab.active { border-color: var(--accent); color: var(--accent); background: rgba(74,158,237,0.08); }
+
+    /* Inline edit */
+    .edit-input { background: var(--bg); border: 1px solid var(--accent); border-radius: 5px; color: var(--text); font-size: 14px; padding: 6px 10px; width: 100%; font-family: var(--font); resize: none; }
+    .edit-input:focus { outline: none; }
+
+    /* Scope tags */
+    .scope-tag { background: var(--border); border-radius: 3px; padding: 1px 6px; font-size: 11px; color: var(--muted); }
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo"><span>co</span>da <span style="color:var(--muted);font-weight:400;font-size:14px">inspection console</span></div>
+  <div class="user-badge" id="user-label">user: local</div>
+</header>
+
+<main>
+  <!-- Stats -->
+  <div class="stats" id="stats">
+    <div class="stat"><div class="stat-val" id="s-prefs">—</div><div class="stat-label">Preferences learned</div></div>
+    <div class="stat"><div class="stat-val" id="s-retrievals">—</div><div class="stat-label">Retrievals</div></div>
+    <div class="stat"><div class="stat-val" id="s-events">—</div><div class="stat-label">Feedback events</div></div>
+    <div class="stat"><div class="stat-val" id="s-accept">—</div><div class="stat-label">Acceptance rate</div></div>
+  </div>
+
+  <!-- Preferences -->
+  <div class="section-title">Preference Objects</div>
+  <div class="filter-row" id="cat-filters">
+    <button class="tab active" data-cat="all">All</button>
+    <button class="tab" data-cat="tone">Tone</button>
+    <button class="tab" data-cat="format">Format</button>
+    <button class="tab" data-cat="goals">Goals</button>
+    <button class="tab" data-cat="constraints">Constraints</button>
+    <button class="tab" data-cat="habits">Habits</button>
+    <button class="tab" data-cat="role">Role</button>
+  </div>
+  <div class="prefs-grid" id="prefs-container"><div class="empty">Loading...</div></div>
+
+  <!-- Recent Retrievals -->
+  <div class="section-title" style="margin-top: 32px;">Recent Retrievals</div>
+  <div class="retrieval-list" id="retrievals-container"><div class="empty">Loading...</div></div>
+</main>
+
+<script>
+const USER_ID = new URLSearchParams(location.search).get('user') || 'local';
+document.getElementById('user-label').textContent = `user: ${USER_ID}`;
+
+let allPrefs = [];
+let activeFilter = 'all';
+
+function confColor(c) {
+  if (c >= 0.8) return '#22c55e';
+  if (c >= 0.6) return '#f59e0b';
+  return '#ef4444';
+}
+
+function relTime(iso) {
+  const d = new Date(iso + 'Z');
+  const diff = (Date.now() - d) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
+}
+
+async function loadStats() {
+  const s = await fetch(`/api/stats?user_id=${USER_ID}`).then(r => r.json());
+  document.getElementById('s-prefs').textContent = s.preferences;
+  document.getElementById('s-retrievals').textContent = s.retrievals;
+  document.getElementById('s-events').textContent = s.feedback_events;
+  document.getElementById('s-accept').textContent = s.acceptance_rate != null ? s.acceptance_rate + '%' : '—';
+}
+
+async function loadPrefs() {
+  allPrefs = await fetch(`/api/preferences?user_id=${USER_ID}`).then(r => r.json());
+  renderPrefs();
+}
+
+function renderPrefs() {
+  const filtered = activeFilter === 'all' ? allPrefs : allPrefs.filter(p => p.category === activeFilter);
+  const container = document.getElementById('prefs-container');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty">No preferences yet. Start using Coda with Claude to build them up.</div>';
+    return;
+  }
+  container.innerHTML = filtered.map(p => {
+    const scope = p.task_scope ? p.task_scope.map(s => `<span class="scope-tag">${s}</span>`).join(' ') : '<span class="scope-tag">all tasks</span>';
+    const barColor = confColor(p.confidence);
+    const barWidth = Math.round(p.confidence * 60);
+    return `
+    <div class="pref-card ${p.pinned ? 'pinned' : ''}" data-id="${p.id}">
+      <span class="cat-badge cat-${p.category}">${p.category}</span>
+      <div class="pref-body">
+        <div class="pref-value" id="val-${p.id}">${escHtml(p.value)}</div>
+        <div class="pref-meta">
+          <span>
+            <span class="conf-bar-wrap"><span class="conf-bar" style="width:${barWidth}px;background:${barColor}"></span></span>
+            <span class="conf">${(p.confidence * 100).toFixed(0)}%</span> confidence
+          </span>
+          <span>✓ ${p.times_accepted} &nbsp; ✗ ${p.times_rejected} &nbsp; ✎ ${p.times_edited}</span>
+          <span>${scope}</span>
+          <span>${p.last_reinforced ? relTime(p.last_reinforced) : 'never used'}</span>
+          <span style="color:var(--border)">${p.source}</span>
+        </div>
+      </div>
+      <div class="pref-actions">
+        <span class="pin-icon ${p.pinned ? 'active' : ''}" title="${p.pinned ? 'Unpin' : 'Pin'}" onclick="togglePin('${p.id}', ${p.pinned})">📌</span>
+        <button class="btn primary" onclick="startEdit('${p.id}')">Edit</button>
+        <button class="btn danger" onclick="deletePref('${p.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function togglePin(id, currentlyPinned) {
+  await fetch(`/api/preferences/${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ pinned: !currentlyPinned }) });
+  loadPrefs();
+}
+
+function startEdit(id) {
+  const pref = allPrefs.find(p => p.id === id);
+  if (!pref) return;
+  const valEl = document.getElementById(`val-${id}`);
+  valEl.innerHTML = `<textarea class="edit-input" id="edit-${id}" rows="2">${escHtml(pref.value)}</textarea>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <button class="btn primary" onclick="saveEdit('${id}')">Save</button>
+      <button class="btn" onclick="loadPrefs()">Cancel</button>
+    </div>`;
+}
+
+async function saveEdit(id) {
+  const val = document.getElementById(`edit-${id}`).value.trim();
+  if (!val) return;
+  await fetch(`/api/preferences/${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ value: val }) });
+  loadPrefs();
+}
+
+async function deletePref(id) {
+  if (!confirm('Delete this preference?')) return;
+  await fetch(`/api/preferences/${id}`, { method: 'DELETE' });
+  loadPrefs(); loadStats();
+}
+
+async function loadRetrievals() {
+  const list = await fetch(`/api/retrievals?user_id=${USER_ID}&limit=10`).then(r => r.json());
+  const container = document.getElementById('retrievals-container');
+  if (list.length === 0) {
+    container.innerHTML = '<div class="empty">No retrievals yet. Connect Claude and start a conversation.</div>';
+    return;
+  }
+  container.innerHTML = list.map(r => `
+    <div class="retrieval-item">
+      <div class="retrieval-header">
+        <span class="retrieval-task">${r.task_type || 'general'}</span>
+        <span class="retrieval-time">${relTime(r.created_at)}</span>
+      </div>
+      <div class="retrieval-prefs">${r.preferences_returned.length} preference${r.preferences_returned.length !== 1 ? 's' : ''} returned${r.context_hint ? ` · "${escHtml(r.context_hint)}"` : ''}</div>
+      <div class="retrieval-id">${r.id}</div>
+    </div>`).join('');
+}
+
+// Filter tabs
+document.getElementById('cat-filters').addEventListener('click', e => {
+  if (!e.target.dataset.cat) return;
+  activeFilter = e.target.dataset.cat;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.cat === activeFilter));
+  renderPrefs();
+});
+
+// Init
+loadStats(); loadPrefs(); loadRetrievals();
+setInterval(() => { loadStats(); loadPrefs(); loadRetrievals(); }, 15000);
+</script>
+</body>
+</html>

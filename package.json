@@ -1,0 +1,14 @@
+{
+  "name": "coda-mcp",
+  "version": "0.1.0",
+  "description": "Preference-first personalization for Claude and AI apps",
+  "scripts": {
+    "start": "python3 server.py",
+    "console": "python3 server.py --console"
+  },
+  "engines": {
+    "python": ">=3.10"
+  },
+  "keywords": ["mcp", "personalization", "claude", "ai", "preferences"],
+  "license": "MIT"
+}
